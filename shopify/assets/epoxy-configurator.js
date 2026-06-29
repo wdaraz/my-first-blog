@@ -78,7 +78,10 @@ class EpoxyTableConfigurator {
     this.specsEl = root.querySelector('.epoxy-configurator__specs');
     this.ctaBtn = root.querySelector('.epoxy-configurator__cta');
 
-    this.variantId = root.dataset.variantId;
+    this.variantId = root.dataset.variantId || '';
+    this.ctaAction = root.dataset.ctaAction || (this.variantId ? 'cart' : 'copy');
+    this.ctaUrl = root.dataset.ctaUrl || '';
+    this.ctaEmail = root.dataset.ctaEmail || '';
     this.basePrice = parseInt(root.dataset.basePrice, 10) || 0;
     this.addonVariantId = root.dataset.addonVariantId || '';
     this.addonUnitPrice = parseInt(root.dataset.addonUnitPrice, 10) || 100;
@@ -100,9 +103,33 @@ class EpoxyTableConfigurator {
   }
 
   init() {
+    this.setupCta();
     this.bindEvents();
     this.initThree();
     this.updateAll();
+  }
+
+  setupCta() {
+    if (!this.ctaBtn) return;
+
+    const labels = {
+      cart: 'Dodaj do koszyka',
+      mailto: 'Wyślij zapytanie e-mail',
+      link: 'Przejdź do zamówienia',
+      copy: 'Kopiuj konfigurację',
+      none: null,
+    };
+
+    const text = labels[this.ctaAction];
+    const ctaText = this.ctaBtn.querySelector('.epoxy-configurator__cta-text');
+
+    if (text && ctaText) {
+      ctaText.textContent = text;
+    }
+
+    if (this.ctaAction === 'none') {
+      this.ctaBtn.hidden = true;
+    }
   }
 
   readConfig() {
@@ -177,7 +204,7 @@ class EpoxyTableConfigurator {
     this.form.addEventListener('change', () => this.onConfigChange());
     this.form.addEventListener('submit', (e) => {
       e.preventDefault();
-      this.addToCart();
+      this.handleCta();
     });
     window.addEventListener('resize', () => this.onResize());
   }
@@ -513,8 +540,59 @@ class EpoxyTableConfigurator {
     };
   }
 
+  getConfigSummary() {
+    const props = this.getLineItemProperties();
+    return Object.entries(props)
+      .filter(([key]) => !key.startsWith('_'))
+      .map(([key, val]) => `${key}: ${val}`)
+      .join('\n');
+  }
+
+  async handleCta() {
+    if (this.ctaAction === 'cart' && this.variantId) {
+      await this.addToCart();
+      return;
+    }
+
+    if (this.ctaAction === 'mailto' && this.ctaEmail) {
+      const subject = encodeURIComponent('Zapytanie — stół epoksydowy');
+      const body = encodeURIComponent(
+        `Witam,\n\nProszę o wycenę stołu epoksydowego:\n\n${this.getConfigSummary()}\n\nSzacunkowa cena: ${this.formatMoney(this.currentPrice)}\n`
+      );
+      window.location.href = `mailto:${this.ctaEmail}?subject=${subject}&body=${body}`;
+      return;
+    }
+
+    if (this.ctaAction === 'link' && this.ctaUrl) {
+      const url = new URL(this.ctaUrl, window.location.origin);
+      url.searchParams.set('config', JSON.stringify(this.config));
+      url.searchParams.set('price', String(this.currentPrice));
+      window.location.href = url.toString();
+      return;
+    }
+
+    if (this.ctaAction === 'copy') {
+      const text = `${this.getConfigSummary()}\n\nSzacunkowa cena: ${this.formatMoney(this.currentPrice)}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        this.showNotification('Skopiowano konfigurację do schowka', 'success');
+      } catch {
+        this.showNotification(text, 'success');
+      }
+      return;
+    }
+
+    this.showNotification(
+      'Konfigurator w trybie podglądu — podłącz produkt lub ustaw akcję przycisku.',
+      'success'
+    );
+  }
+
   async addToCart() {
-    if (!this.variantId) return;
+    if (!this.variantId) {
+      this.handleCta();
+      return;
+    }
 
     const ctaText = this.ctaBtn.querySelector('.epoxy-configurator__cta-text');
     const ctaLoading = this.ctaBtn.querySelector('.epoxy-configurator__cta-loading');

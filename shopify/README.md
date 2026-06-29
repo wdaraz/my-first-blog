@@ -1,6 +1,35 @@
 # Konfigurator 3D stołów epoksydowych — Shopify
 
-Interaktywny konfigurator 3D do sklepu Shopify. Klient może ustawić wymiary, drewno, kolor żywicy, styl wypełnienia, krawędź i nogi, zobaczyć podgląd 3D w czasie rzeczywistym, sprawdzić cenę i dodać produkt do koszyka.
+Interaktywny konfigurator 3D do sklepu Shopify (lub jako samodzielna strona). Klient może ustawić wymiary, drewno, kolor żywicy, styl wypełnienia, krawędź i nogi, zobaczyć podgląd 3D w czasie rzeczywistym i sprawdzić cenę.
+
+**Produkt Shopify nie jest wymagany.** Konfigurator działa niezależnie — produkt potrzebny jest tylko wtedy, gdy chcesz „Dodaj do koszyka”.
+
+## Podgląd lokalny (bez Shopify)
+
+Najszybszy sposób, żeby zobaczyć wygląd:
+
+```bash
+cd shopify
+python3 -m http.server 8080
+```
+
+Otwórz w przeglądarce: **http://localhost:8080/demo.html**
+
+Możesz też otworzyć plik `demo.html` bezpośrednio — ale serwer HTTP jest pewniejszy (moduły ES / importmap).
+
+## Dlaczego w ogóle był produkt?
+
+Shopify **wymaga produktu tylko do koszyka i płatności** — to ograniczenie platformy, nie konfiguratora. Sam podgląd 3D, wycena i UI działają bez niego.
+
+Tryby przycisku (bez produktu):
+
+| Akcja | Co robi |
+|-------|---------|
+| **Kopiuj konfigurację** (domyślna) | Kopiuje specyfikację + cenę do schowka |
+| **Wyślij e-mail** | Otwiera klienta poczty z gotową wiadomością |
+| **Przekieruj na URL** | Przechodzi na stronę kontaktu/zamówienia z parametrami |
+| **Ukryj przycisk** | Tylko podgląd 3D i cena |
+| **Dodaj do koszyka** | Wymaga podłączenia produktu Shopify |
 
 ## Funkcje
 
@@ -28,7 +57,9 @@ W panelu **Shopify Admin → Sklep online → Motywy → Edytuj kod** skopiuj:
 | `assets/epoxy-configurator.js` | `assets/` |
 | `assets/epoxy-configurator.css` | `assets/` |
 
-### 2. Utwórz produkty
+### 2. Utwórz produkty (tylko dla koszyka)
+
+Pomiń ten krok, jeśli używasz trybu bez produktu (e-mail / kopiuj / link).
 
 **Produkt bazowy** — np. „Stół epoksydowy — konfigurator”:
 - Ustaw cenę bazową (np. 2500 PLN) — to cena startowa w kalkulatorze
@@ -43,12 +74,9 @@ W panelu **Shopify Admin → Sklep online → Motywy → Edytuj kod** skopiuj:
 ### 3. Dodaj sekcję do strony
 
 1. **Dostosuj motyw** → dodaj sekcję **„Konfigurator stołu epoksydowego”**
-2. Wybierz **produkt bazowy** i opcjonalnie **produkt dopłaty**
-3. Dostosuj stawki wyceny w ustawieniach sekcji:
-   - Cena za m² (w groszach, np. `350000` = 3500 PLN)
-   - Cena żywicy za litr
-   - Minimalna cena
-   - Zakresy wymiarów
+2. Ustaw **akcję przycisku** (domyślnie: kopiuj konfigurację — bez produktu)
+3. Opcjonalnie wybierz **produkt bazowy**, jeśli chcesz koszyk
+4. Dostosuj stawki wyceny w ustawieniach sekcji
 
 ### 4. Opublikuj
 
@@ -100,11 +128,12 @@ _Wycena konfiguratora: 6 847,00 zł
 ```
 shopify/
 ├── README.md
+├── demo.html                             # Podgląd lokalny bez Shopify
 ├── sections/
-│   └── epoxy-table-configurator.liquid   # Sekcja motywu
+│   └── epoxy-table-configurator.liquid
 └── assets/
-    ├── epoxy-configurator.js             # Logika 3D + wycena + koszyk
-    └── epoxy-configurator.css            # Style
+    ├── epoxy-configurator.js
+    └── epoxy-configurator.css
 ```
 
 ## Rozwiązywanie problemów

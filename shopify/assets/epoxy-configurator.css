@@ -309,6 +309,14 @@
   margin-top: 0.75rem;
 }
 
+.epoxy-configurator__hint {
+  color: var(--epoxy-muted);
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+
 /* ── Toast ── */
 
 .epoxy-configurator__toast {

@@ -9,10 +9,13 @@
   class="epoxy-configurator"
   id="epoxy-configurator-{{ section.id }}"
   data-section-id="{{ section.id }}"
-  data-variant-id="{{ section.settings.product.selected_or_first_available_variant.id }}"
-  data-base-price="{{ section.settings.product.selected_or_first_available_variant.price }}"
-  data-addon-variant-id="{{ section.settings.addon_product.selected_or_first_available_variant.id }}"
-  data-addon-unit-price="{{ section.settings.addon_product.selected_or_first_available_variant.price }}"
+  data-variant-id="{% if section.settings.product != blank %}{{ section.settings.product.selected_or_first_available_variant.id }}{% endif %}"
+  data-base-price="{% if section.settings.product != blank %}{{ section.settings.product.selected_or_first_available_variant.price }}{% else %}{{ section.settings.base_price }}{% endif %}"
+  data-addon-variant-id="{% if section.settings.addon_product != blank %}{{ section.settings.addon_product.selected_or_first_available_variant.id }}{% endif %}"
+  data-addon-unit-price="{% if section.settings.addon_product != blank %}{{ section.settings.addon_product.selected_or_first_available_variant.price }}{% else %}100{% endif %}"
+  data-cta-action="{{ section.settings.cta_action }}"
+  data-cta-url="{{ section.settings.cta_url }}"
+  data-cta-email="{{ section.settings.cta_email }}"
   data-currency="{{ cart.currency.iso_code }}"
   data-money-format="{{ shop.money_format | escape }}"
   data-price-per-m2="{{ section.settings.price_per_m2 }}"
@@ -219,15 +222,16 @@
           type="submit"
           class="epoxy-configurator__cta"
           id="epoxy-add-to-cart-{{ section.id }}"
-          {% unless section.settings.product != blank %}disabled{% endunless %}
         >
           <span class="epoxy-configurator__cta-text">Dodaj do koszyka</span>
-          <span class="epoxy-configurator__cta-loading" hidden>Dodawanie…</span>
+          <span class="epoxy-configurator__cta-loading" hidden>Przetwarzanie…</span>
         </button>
 
-        {% unless section.settings.product != blank %}
-          <p class="epoxy-configurator__error">Wybierz produkt w ustawieniach sekcji, aby włączyć zakup.</p>
-        {% endunless %}
+        {% if section.settings.cta_action == 'cart' and section.settings.product == blank %}
+          <p class="epoxy-configurator__hint">
+            Tryb bez produktu — wybierz inną akcję przycisku lub podłącz produkt Shopify, aby włączyć koszyk.
+          </p>
+        {% endif %}
       </form>
     </div>
   </div>
@@ -263,22 +267,59 @@
     },
     {
       "type": "header",
-      "content": "Produkty Shopify"
+      "content": "Produkty Shopify (opcjonalnie)"
     },
     {
       "type": "product",
       "id": "product",
-      "label": "Produkt bazowy (stół epoksydowy)"
+      "label": "Produkt bazowy",
+      "info": "Potrzebny tylko przy akcji „Dodaj do koszyka”. Bez produktu konfigurator działa samodzielnie."
     },
     {
       "type": "product",
       "id": "addon_product",
       "label": "Produkt dopłaty (opcjonalnie)",
-      "info": "Utwórz ukryty produkt „Dopłata konfigurator” z ceną 1 PLN za sztukę. System doda go do koszyka z ilością = różnica ceny w PLN."
+      "info": "Ukryty produkt 1 PLN/szt. — doprecyzowuje cenę w koszyku."
+    },
+    {
+      "type": "header",
+      "content": "Akcja przycisku"
+    },
+    {
+      "type": "select",
+      "id": "cta_action",
+      "label": "Co robi przycisk",
+      "default": "copy",
+      "options": [
+        { "value": "copy", "label": "Kopiuj konfigurację (bez produktu)" },
+        { "value": "mailto", "label": "Wyślij e-mail z konfiguracją" },
+        { "value": "link", "label": "Przekieruj na URL" },
+        { "value": "cart", "label": "Dodaj do koszyka Shopify" },
+        { "value": "none", "label": "Ukryj przycisk (tylko podgląd)" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "cta_email",
+      "label": "E-mail (dla akcji mailto)",
+      "default": "kontakt@example.com"
+    },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "URL (dla akcji link)",
+      "info": "Konfiguracja zostanie dołączona jako parametry URL."
     },
     {
       "type": "header",
       "content": "Wycena"
+    },
+    {
+      "type": "number",
+      "id": "base_price",
+      "label": "Cena bazowa bez produktu (w groszach)",
+      "default": 250000,
+      "info": "Używana gdy nie wybrano produktu Shopify. 250000 = 2500 PLN."
     },
     {
       "type": "number",
