@@ -1,0 +1,431 @@
+{% comment %}
+  Konfigurator 3D stołów epoksydowych dla Shopify
+  Wymaga: epoxy-configurator.js, epoxy-textures.js, epoxy-configurator.css,
+          folder assets/textures/ z mapami drewna
+{% endcomment %}
+
+{{ 'epoxy-configurator.css' | asset_url | stylesheet_tag }}
+
+<div
+  class="epoxy-configurator"
+  id="epoxy-configurator-{{ section.id }}"
+  data-section-id="{{ section.id }}"
+  data-variant-id="{% if section.settings.product != blank %}{{ section.settings.product.selected_or_first_available_variant.id }}{% endif %}"
+  data-base-price="{% if section.settings.product != blank %}{{ section.settings.product.selected_or_first_available_variant.price }}{% else %}{{ section.settings.base_price }}{% endif %}"
+  data-addon-variant-id="{% if section.settings.addon_product != blank %}{{ section.settings.addon_product.selected_or_first_available_variant.id }}{% endif %}"
+  data-addon-unit-price="{% if section.settings.addon_product != blank %}{{ section.settings.addon_product.selected_or_first_available_variant.price }}{% else %}100{% endif %}"
+  data-cta-action="{{ section.settings.cta_action }}"
+  data-cta-url="{{ section.settings.cta_url }}"
+  data-cta-email="{{ section.settings.cta_email }}"
+  data-currency="{{ cart.currency.iso_code }}"
+  data-money-format="{{ shop.money_format | escape }}"
+  data-price-per-m2="{{ section.settings.price_per_m2 }}"
+  data-epoxy-price-per-liter="{{ section.settings.epoxy_price_per_liter }}"
+  data-min-price="{{ section.settings.min_price }}"
+  data-epoxy-depth="{{ section.settings.default_epoxy_depth }}"
+>
+  <div class="epoxy-configurator__header">
+    {% if section.settings.heading != blank %}
+      <h2 class="epoxy-configurator__title">{{ section.settings.heading }}</h2>
+    {% endif %}
+    {% if section.settings.subheading != blank %}
+      <p class="epoxy-configurator__subtitle">{{ section.settings.subheading }}</p>
+    {% endif %}
+  </div>
+
+  <div class="epoxy-configurator__layout">
+    <div class="epoxy-configurator__preview">
+      <div class="epoxy-configurator__canvas-wrap">
+        <canvas id="epoxy-canvas-{{ section.id }}" aria-label="Podgląd 3D stołu epoksydowego"></canvas>
+        <div class="epoxy-configurator__canvas-hint">
+          <span>Przeciągnij, aby obrócić</span>
+          <span>Kółko myszy — przybliż</span>
+        </div>
+      </div>
+      <div class="epoxy-configurator__dimensions" id="epoxy-dimensions-{{ section.id }}">
+        <span class="epoxy-configurator__dim epoxy-configurator__dim--length"></span>
+        <span class="epoxy-configurator__dim epoxy-configurator__dim--width"></span>
+        <span class="epoxy-configurator__dim epoxy-configurator__dim--height"></span>
+      </div>
+    </div>
+
+    <div class="epoxy-configurator__panel">
+      <form class="epoxy-configurator__form" id="epoxy-form-{{ section.id }}">
+
+        <fieldset class="epoxy-configurator__group">
+          <legend>Wymiary blatu</legend>
+          <div class="epoxy-configurator__row">
+            <label for="epoxy-length-{{ section.id }}">Długość (cm)</label>
+            <input
+              type="range"
+              id="epoxy-length-{{ section.id }}"
+              name="length"
+              min="{{ section.settings.min_length }}"
+              max="{{ section.settings.max_length }}"
+              step="5"
+              value="{{ section.settings.default_length }}"
+              data-input="length"
+            >
+            <output class="epoxy-configurator__value" data-for="length">{{ section.settings.default_length }} cm</output>
+          </div>
+          <div class="epoxy-configurator__row">
+            <label for="epoxy-width-{{ section.id }}">Szerokość (cm)</label>
+            <input
+              type="range"
+              id="epoxy-width-{{ section.id }}"
+              name="width"
+              min="{{ section.settings.min_width }}"
+              max="{{ section.settings.max_width }}"
+              step="5"
+              value="{{ section.settings.default_width }}"
+              data-input="width"
+            >
+            <output class="epoxy-configurator__value" data-for="width">{{ section.settings.default_width }} cm</output>
+          </div>
+          <div class="epoxy-configurator__row">
+            <label for="epoxy-thickness-{{ section.id }}">Grubość blatu (cm)</label>
+            <input
+              type="range"
+              id="epoxy-thickness-{{ section.id }}"
+              name="thickness"
+              min="3"
+              max="8"
+              step="0.5"
+              value="{{ section.settings.default_thickness }}"
+              data-input="thickness"
+            >
+            <output class="epoxy-configurator__value" data-for="thickness">{{ section.settings.default_thickness }} cm</output>
+          </div>
+        </fieldset>
+
+        <fieldset class="epoxy-configurator__group">
+          <legend>Rodzaj drewna</legend>
+          <div class="epoxy-configurator__options epoxy-configurator__options--wood" data-option="wood">
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="wood" value="oak" checked data-price-addon="0">
+              <span class="epoxy-configurator__swatch" style="--swatch-color: #c4a35a"></span>
+              <span>Dąb</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="wood" value="walnut" data-price-addon="80000">
+              <span class="epoxy-configurator__swatch" style="--swatch-color: #5c3d2e"></span>
+              <span>Orzech</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="wood" value="ash" data-price-addon="30000">
+              <span class="epoxy-configurator__swatch" style="--swatch-color: #e8dcc8"></span>
+              <span>Jesion</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="wood" value="olive" data-price-addon="150000">
+              <span class="epoxy-configurator__swatch" style="--swatch-color: #8b6914"></span>
+              <span>Oliwka</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="epoxy-configurator__group">
+          <legend>Żywica epoksydowa</legend>
+          <div class="epoxy-configurator__row">
+            <label for="epoxy-style-{{ section.id }}">Styl wypełnienia</label>
+            <select id="epoxy-style-{{ section.id }}" name="epoxy_style" data-input="epoxy_style">
+              <option value="river" selected>Rzeka (środek)</option>
+              <option value="accent">Pas akcentowy</option>
+              <option value="full">Pełne wypełnienie</option>
+            </select>
+          </div>
+          <div class="epoxy-configurator__options epoxy-configurator__options--epoxy" data-option="epoxy_color">
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="epoxy_color" value="clear" checked data-price-addon="0">
+              <span class="epoxy-configurator__swatch epoxy-configurator__swatch--epoxy" style="--swatch-color: rgba(200,230,255,0.6)"></span>
+              <span>Przezroczysta</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="epoxy_color" value="ocean" data-price-addon="20000">
+              <span class="epoxy-configurator__swatch epoxy-configurator__swatch--epoxy" style="--swatch-color: #1a6b8a"></span>
+              <span>Ocean</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="epoxy_color" value="emerald" data-price-addon="25000">
+              <span class="epoxy-configurator__swatch epoxy-configurator__swatch--epoxy" style="--swatch-color: #2d6a4f"></span>
+              <span>Szmaragd</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="epoxy_color" value="amber" data-price-addon="20000">
+              <span class="epoxy-configurator__swatch epoxy-configurator__swatch--epoxy" style="--swatch-color: #d4a017"></span>
+              <span>Bursztyn</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="epoxy_color" value="black" data-price-addon="15000">
+              <span class="epoxy-configurator__swatch epoxy-configurator__swatch--epoxy" style="--swatch-color: #1a1a2e"></span>
+              <span>Czarna</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="epoxy-configurator__group">
+          <legend>Krawędź blatu</legend>
+          <div class="epoxy-configurator__options" data-option="edge">
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="edge" value="live" checked data-price-addon="0">
+              <span>Naturalna (live edge)</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="edge" value="straight" data-price-addon="50000">
+              <span>Prosta (szlifowana)</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="epoxy-configurator__group">
+          <legend>Nogi</legend>
+          <div class="epoxy-configurator__options" data-option="legs">
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="legs" value="hairpin" checked data-price-addon="40000">
+              <span>Hairpin (metal)</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="legs" value="wooden" data-price-addon="60000">
+              <span>Drewniane</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="legs" value="u_frame" data-price-addon="80000">
+              <span>Rama U (stal)</span>
+            </label>
+            <label class="epoxy-configurator__option">
+              <input type="radio" name="legs" value="x_frame" data-price-addon="100000">
+              <span>Rama X (stal)</span>
+            </label>
+          </div>
+          <div class="epoxy-configurator__row">
+            <label for="epoxy-leg-color-{{ section.id }}">Kolor nóg</label>
+            <select id="epoxy-leg-color-{{ section.id }}" name="leg_color" data-input="leg_color">
+              <option value="black">Czarny</option>
+              <option value="gold">Złoty</option>
+              <option value="silver">Srebrny</option>
+              <option value="white">Biały</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <div class="epoxy-configurator__summary">
+          <div class="epoxy-configurator__price-row">
+            <span class="epoxy-configurator__price-label">Cena szacunkowa</span>
+            <span class="epoxy-configurator__price" id="epoxy-price-{{ section.id }}">—</span>
+          </div>
+          <p class="epoxy-configurator__price-note">
+            Cena obejmuje blat, żywicę i nogi. Ostateczna wycena po weryfikacji zamówienia.
+          </p>
+          <ul class="epoxy-configurator__specs" id="epoxy-specs-{{ section.id }}"></ul>
+        </div>
+
+        <button
+          type="submit"
+          class="epoxy-configurator__cta"
+          id="epoxy-add-to-cart-{{ section.id }}"
+        >
+          <span class="epoxy-configurator__cta-text">Dodaj do koszyka</span>
+          <span class="epoxy-configurator__cta-loading" hidden>Przetwarzanie…</span>
+        </button>
+
+        {% if section.settings.cta_action == 'cart' and section.settings.product == blank %}
+          <p class="epoxy-configurator__hint">
+            Tryb bez produktu — wybierz inną akcję przycisku lub podłącz produkt Shopify, aby włączyć koszyk.
+          </p>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+<script type="module" src="{{ 'epoxy-configurator.js' | asset_url }}"></script>
+
+{% schema %}
+{
+  "name": "Konfigurator stołu epoksydowego",
+  "tag": "section",
+  "class": "section-epoxy-configurator",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Nagłówek",
+      "default": "Skonfiguruj swój stół epoksydowy"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Podtytuł",
+      "default": "Dostosuj wymiary, drewno, żywicę i nogi — zobacz podgląd 3D i cenę na żywo."
+    },
+    {
+      "type": "header",
+      "content": "Produkty Shopify (opcjonalnie)"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Produkt bazowy",
+      "info": "Potrzebny tylko przy akcji „Dodaj do koszyka”. Bez produktu konfigurator działa samodzielnie."
+    },
+    {
+      "type": "product",
+      "id": "addon_product",
+      "label": "Produkt dopłaty (opcjonalnie)",
+      "info": "Ukryty produkt 1 PLN/szt. — doprecyzowuje cenę w koszyku."
+    },
+    {
+      "type": "header",
+      "content": "Akcja przycisku"
+    },
+    {
+      "type": "select",
+      "id": "cta_action",
+      "label": "Co robi przycisk",
+      "default": "copy",
+      "options": [
+        { "value": "copy", "label": "Kopiuj konfigurację (bez produktu)" },
+        { "value": "mailto", "label": "Wyślij e-mail z konfiguracją" },
+        { "value": "link", "label": "Przekieruj na URL" },
+        { "value": "cart", "label": "Dodaj do koszyka Shopify" },
+        { "value": "none", "label": "Ukryj przycisk (tylko podgląd)" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "cta_email",
+      "label": "E-mail (dla akcji mailto)",
+      "default": "kontakt@example.com"
+    },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "URL (dla akcji link)",
+      "info": "Konfiguracja zostanie dołączona jako parametry URL."
+    },
+    {
+      "type": "header",
+      "content": "Wycena"
+    },
+    {
+      "type": "number",
+      "id": "base_price",
+      "label": "Cena bazowa bez produktu (w groszach)",
+      "default": 250000,
+      "info": "Używana gdy nie wybrano produktu Shopify. 250000 = 2500 PLN."
+    },
+    {
+      "type": "number",
+      "id": "price_per_m2",
+      "label": "Cena za m² blatu (w groszach)",
+      "default": 350000,
+      "info": "350000 = 3500 PLN/m²"
+    },
+    {
+      "type": "number",
+      "id": "epoxy_price_per_liter",
+      "label": "Cena żywicy za litr (w groszach)",
+      "default": 8000
+    },
+    {
+      "type": "number",
+      "id": "min_price",
+      "label": "Minimalna cena (w groszach)",
+      "default": 250000
+    },
+    {
+      "type": "header",
+      "content": "Domyślne wymiary (cm)"
+    },
+    {
+      "type": "range",
+      "id": "default_length",
+      "label": "Długość domyślna",
+      "min": 120,
+      "max": 300,
+      "step": 5,
+      "default": 200,
+      "unit": "cm"
+    },
+    {
+      "type": "range",
+      "id": "default_width",
+      "label": "Szerokość domyślna",
+      "min": 60,
+      "max": 120,
+      "step": 5,
+      "default": 90,
+      "unit": "cm"
+    },
+    {
+      "type": "range",
+      "id": "default_thickness",
+      "label": "Grubość domyślna",
+      "min": 3,
+      "max": 8,
+      "step": 0.5,
+      "default": 4,
+      "unit": "cm"
+    },
+    {
+      "type": "number",
+      "id": "default_epoxy_depth",
+      "label": "Głębokość żywicy (cm)",
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "min_length",
+      "label": "Min. długość",
+      "min": 80,
+      "max": 200,
+      "step": 10,
+      "default": 120,
+      "unit": "cm"
+    },
+    {
+      "type": "range",
+      "id": "max_length",
+      "label": "Max. długość",
+      "min": 200,
+      "max": 400,
+      "step": 10,
+      "default": 300,
+      "unit": "cm"
+    },
+    {
+      "type": "range",
+      "id": "min_width",
+      "label": "Min. szerokość",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "default": 60,
+      "unit": "cm"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "Max. szerokość",
+      "min": 80,
+      "max": 150,
+      "step": 5,
+      "default": 120,
+      "unit": "cm"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Konfigurator stołu epoksydowego"
+    }
+  ]
+}
+{% endschema %}
