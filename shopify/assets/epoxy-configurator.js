@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TextureManager } from './epoxy-textures.js';
 
 /**
  * Konfigurator 3D stołów epoksydowych — Shopify
@@ -98,15 +99,37 @@ class EpoxyTableConfigurator {
     this.controls = null;
     this.tableGroup = null;
     this.animationId = null;
+    this.textureManager = new TextureManager();
+    this.isLoading = true;
 
     this.init();
   }
 
-  init() {
+  async init() {
     this.setupCta();
     this.bindEvents();
+    this.showLoading(true);
+
+    await this.textureManager.loadAll();
+
+    this.showLoading(false);
+    this.isLoading = false;
     this.initThree();
     this.updateAll();
+  }
+
+  showLoading(visible) {
+    const wrap = this.canvas?.parentElement;
+    if (!wrap) return;
+
+    let loader = wrap.querySelector('.epoxy-configurator__loader');
+    if (!loader && visible) {
+      loader = document.createElement('div');
+      loader.className = 'epoxy-configurator__loader';
+      loader.innerHTML = '<span class="epoxy-configurator__loader-spinner"></span><span>Ładowanie tekstur…</span>';
+      wrap.appendChild(loader);
+    }
+    if (loader) loader.hidden = !visible;
   }
 
   setupCta() {
@@ -210,6 +233,7 @@ class EpoxyTableConfigurator {
   }
 
   onConfigChange() {
+    if (this.isLoading) return;
     this.config = this.readConfig();
     this.updateOutputs();
     this.updatePrice();
@@ -321,7 +345,21 @@ class EpoxyTableConfigurator {
     return cm / 100;
   }
 
-  createWoodMaterial() {
+  createWoodMaterial(lengthCm, widthCm) {
+    const maps = this.textureManager.getWoodMaps(this.config.wood, lengthCm, widthCm);
+
+    if (maps) {
+      return new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: maps.map,
+        normalMap: maps.normalMap,
+        roughnessMap: maps.roughnessMap,
+        normalScale: maps.normalScale,
+        roughness: 0.85,
+        metalness: 0.02,
+      });
+    }
+
     return new THREE.MeshStandardMaterial({
       color: WOOD_COLORS[this.config.wood] || 0xc4a35a,
       roughness: 0.75,
@@ -329,25 +367,44 @@ class EpoxyTableConfigurator {
     });
   }
 
-  createEpoxyMaterial() {
+  createEpoxyMaterial(lengthCm, widthCm) {
     const color = EPOXY_COLORS[this.config.epoxy_color] || 0x88ccee;
     const isClear = this.config.epoxy_color === 'clear';
+    const normalMap = this.textureManager.getEpoxyNormal(lengthCm, widthCm);
 
     return new THREE.MeshPhysicalMaterial({
       color,
-      roughness: 0.05,
+      roughness: isClear ? 0.02 : 0.06,
       metalness: 0.0,
-      transmission: isClear ? 0.85 : 0.4,
-      thickness: 0.3,
+      transmission: isClear ? 0.88 : 0.45,
+      thickness: 0.35,
       transparent: true,
-      opacity: isClear ? 0.75 : 0.92,
-      ior: 1.5,
+      opacity: isClear ? 0.78 : 0.93,
+      ior: 1.52,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.03,
+      normalMap,
+      normalScale: new THREE.Vector2(0.15, 0.15),
+      envMapIntensity: 1.2,
     });
   }
 
-  createLegMaterial() {
+  createLegMaterial(lengthCm) {
+    if (this.config.legs === 'wooden') {
+      const maps = this.textureManager.getWoodMaps(this.config.wood, 30, lengthCm);
+      if (maps) {
+        return new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          map: maps.map,
+          normalMap: maps.normalMap,
+          roughnessMap: maps.roughnessMap,
+          normalScale: maps.normalScale,
+          roughness: 0.8,
+          metalness: 0.02,
+        });
+      }
+    }
+
     return new THREE.MeshStandardMaterial({
       color: LEG_COLORS[this.config.leg_color] || 0x222222,
       roughness: this.config.legs === 'wooden' ? 0.7 : 0.35,
@@ -362,8 +419,8 @@ class EpoxyTableConfigurator {
     const st = this.scale(thickness);
     const group = new THREE.Group();
 
-    const woodMat = this.createWoodMaterial();
-    const epoxyMat = this.createEpoxyMaterial();
+    const woodMat = this.createWoodMaterial(length, width);
+    const epoxyMat = this.createEpoxyMaterial(length, width);
 
     let epoxyFrac;
     if (epoxy_style === 'river') epoxyFrac = 0.22;
@@ -421,7 +478,7 @@ class EpoxyTableConfigurator {
     const legH = 0.72;
     const inset = 0.12;
     const group = new THREE.Group();
-    const mat = this.createLegMaterial();
+    const mat = this.createLegMaterial(length);
 
     const positions = [
       [-sl / 2 + inset, -legH / 2, -sw / 2 + inset],
@@ -484,13 +541,18 @@ class EpoxyTableConfigurator {
     while (this.tableGroup.children.length) {
       const child = this.tableGroup.children[0];
       this.tableGroup.remove(child);
-      child.traverse((obj) => {
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-          else obj.material.dispose();
-        }
-      });
+        child.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            mats.forEach((m) => {
+              ['map', 'normalMap', 'roughnessMap'].forEach((key) => {
+                if (m[key]) m[key].dispose();
+              });
+              m.dispose();
+            });
+          }
+        });
     }
 
     const top = this.buildTop();

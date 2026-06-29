@@ -49,13 +49,17 @@ Tryby przycisku (bez produktu):
 
 ### 1. Wgraj pliki do motywu
 
-W panelu **Shopify Admin → Sklep online → Motywy → Edytuj kod** skopiuj:
+Wgraj pliki do motywu:
 
 | Plik lokalny | Folder w motywie |
 |---|---|
 | `sections/epoxy-table-configurator.liquid` | `sections/` |
 | `assets/epoxy-configurator.js` | `assets/` |
+| `assets/epoxy-textures.js` | `assets/` |
 | `assets/epoxy-configurator.css` | `assets/` |
+| `assets/textures/*.jpg` | `assets/textures/` |
+
+Tekstury drewna (CC0, [Poly Haven](https://polyhaven.com)): mapy koloru, normalnej i chropowatości dla dębu, orzecha, jesionu i oliwki.
 
 ### 2. Utwórz produkty (tylko dla koszyka)
 
